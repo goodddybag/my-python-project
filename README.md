@@ -10,3 +10,4 @@ This API allows you to classify numbers based on various mathematical properties
 * Fun Fact: Retrieves a fun fact about the number using the Numbers API.
 
  # Installation 
+ 1. Clone the repository:
