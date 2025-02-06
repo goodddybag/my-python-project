@@ -67,14 +67,9 @@ def classify_number():
     try:
         number = float(request.args.get('number'))
 
-        # Handle case where the number is a floating-point
-        if not number.is_integer():  # Reject floating-point numbers
-            return jsonify({"error": "Floating-point numbers are not supported. Please provide an integer."}), 400
-        number = int(number)  # Convert to integer if it's a valid integer
-
-        # Negative numbers should not cause 400 errors anymore
-        if number < 0:
-            pass  # You can also add a specific message or note for negative numbers if necessary
+        # Convert float to integer if no decimal part
+        if number.is_integer():
+            number = int(number)
 
     except ValueError:
         return jsonify({"error": "Invalid input. Please enter a valid number."}), 400
