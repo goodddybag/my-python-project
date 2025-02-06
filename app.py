@@ -27,11 +27,15 @@ async def get_fun_fact_async(number):
         except Exception as e:
             return f"Error: {str(e)}"
 
-# Memoization of fun fact to avoid repeated API calls
-@cache.memoize(timeout=3600)  # Cache for 1 hour
-async def get_fun_fact(number):
-    return await get_fun_fact_async(number)
+# Manual caching of fun facts (no async caching support here)
+def get_fun_fact_from_cache(number):
+    fun_fact = cache.get(f"fun_fact_{number}")
+    if fun_fact is None:
+        fun_fact = asyncio.run(get_fun_fact_async(number))  # Ensure we wait for the async function
+        cache.set(f"fun_fact_{number}", fun_fact, timeout=3600)  # Cache for 1 hour
+    return fun_fact
 
+# Sync function to handle number checks
 def is_prime(number):
     if number <= 1:
         return False
@@ -52,7 +56,7 @@ def sum_of_digits(number):
     return sum(int(digit) for digit in str(number))
 
 @app.route('/api/classify-number', methods=['GET'])
-async def classify_number():
+def classify_number():
     if 'number' not in request.args:
         return jsonify({"error": "Missing 'number' parameter. Please provide a number."}), 400
 
@@ -81,8 +85,8 @@ async def classify_number():
     elif odd_or_even == "Even":
         properties.append("even")
 
-    # Fetch fun fact asynchronously
-    fun_fact = await get_fun_fact(number)
+    # Fetch fun fact synchronously
+    fun_fact = get_fun_fact_from_cache(number)
 
     # Build response with explicit Armstrong information
     result = {
