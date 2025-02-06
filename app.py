@@ -1,92 +1,116 @@
-from flask import Flask, request, jsonify
-import requests
-import os
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+import asyncio
+import aiohttp
+from flask_caching import Cache
 
 app = Flask(__name__)
 
-# Helper functions
-def is_prime(n):
-    if n < 2:
+# Enable CORS for all routes
+CORS(app)
+
+# Set up cache for storing fun facts
+app.config['CACHE_TYPE'] = 'simple'
+cache = Cache(app)
+
+# Asynchronous function to get fun facts from Numbers API
+async def get_fun_fact_async(number):
+    url = f"http://numbersapi.com/{number}?json"
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url, timeout=5) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data.get("text", "No fun fact found!")
+        except asyncio.TimeoutError:
+            return "Fun fact request timed out"
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+# Manual caching of fun facts
+def get_fun_fact_from_cache(number):
+    fun_fact = cache.get(f"fun_fact_{number}")
+    if fun_fact is None:
+        fun_fact = asyncio.run(get_fun_fact_async(number))  # Ensure we wait for the async function
+        cache.set(f"fun_fact_{number}", fun_fact, timeout=3600)  # Cache for 1 hour
+    return fun_fact
+
+# Sync function to handle number checks
+def is_prime(number):
+    if number <= 1:
         return False
-    for i in range(2, int(n**0.5) + 1):
-        if n % i == 0:
+    for i in range(2, int(number ** 0.5) + 1):
+        if number % i == 0:
             return False
     return True
 
-def is_perfect(n):
-    if n < 2:
-        return False
-    return sum(i for i in range(1, n) if n % i == 0) == n
+def is_perfect(number):
+    if number < 0:
+        return False  # Negative numbers are not perfect
+    divisors = [i for i in range(1, number) if number % i == 0]
+    return sum(divisors) == number
 
-def is_armstrong(n):
-    digits = [int(d) for d in str(abs(n))]  # Handle negative numbers safely
-    length = len(digits)
-    return sum(d ** length for d in digits) == abs(n)
+def is_armstrong(number):
+    if number < 0:
+        return False  # Negative numbers can't be Armstrong
+    digits = [int(digit) for digit in str(number)]
+    return sum([digit ** len(digits) for digit in digits]) == number
 
-def digit_sum(n):
-    return sum(int(d) for d in str(abs(n)))
-
-def get_fun_fact(n):
-    if is_armstrong(n):
-        digits = [int(d) for d in str(abs(n))]
-        length = len(digits)
-        armstrong_expression = " + ".join(f"{d}^{length}" for d in digits)
-        return f"{n} is an Armstrong number because {armstrong_expression} = {n}"
-    
-    try:
-        response = requests.get(f"http://numbersapi.com/{n}/math?json", timeout=5)
-        if response.status_code == 200:
-            return response.json().get("text", "No fun fact available.")
-    except requests.RequestException:
-        pass  # If the request fails, return a default message
-
-    return "No fun fact available."
-
-@app.route('/', methods=['GET'])
-def home():
-    return jsonify({
-        "message": "Welcome to the Number Classification API!",
-        "usage": "Use /api/classify-number?number=<integer> to classify a number."
-    }), 200
+def sum_of_digits(number):
+    return sum(int(digit) for digit in str(abs(number)))  # Use absolute value to sum digits of negative numbers
 
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
-    number_str = request.args.get('number')
+    if 'number' not in request.args:
+        return jsonify({"error": "Missing 'number' parameter. Please provide a number."}), 400
 
-    # Input validation
     try:
-        number = int(number_str)
-    except (TypeError, ValueError):
-        return jsonify({
-            "error": True,
-            "message": "Invalid input. Please provide a valid integer.",
-            "number": number_str
-        }), 400
+        number = float(request.args.get('number'))
 
-    properties = ["even" if number % 2 == 0 else "odd"]
-    
-    if is_armstrong(number):
+        # Convert float to integer if no decimal part
+        if number.is_integer():
+            number = int(number)
+
+        # Negative numbers should not cause 400 errors anymore
+        if number < 0:
+            pass  # You can also add a specific message or note for negative numbers if necessary
+
+    except ValueError:
+        return jsonify({"error": "Invalid input. Please enter a valid number."}), 400
+
+    # Perform checks
+    prime = is_prime(number)
+    perfect = is_perfect(number)
+    armstrong = is_armstrong(number)
+    odd_or_even = "Even" if number % 2 == 0 else "Odd"
+    digit_sum = sum_of_digits(number)
+
+    # Build properties list based on the conditions
+    properties = []
+    if armstrong:
         properties.append("armstrong")
+    if odd_or_even == "Odd":
+        properties.append("odd")
+    elif odd_or_even == "Even":
+        properties.append("even")
 
-    response = {
-        "error": False,
+    # Fetch fun fact synchronously
+    fun_fact = get_fun_fact_from_cache(number)
+
+    # Build response with explicit Armstrong information
+    result = {
         "number": number,
-        "is_prime": is_prime(number),
-        "is_perfect": is_perfect(number),
+        "is_prime": prime,
+        "is_perfect": perfect,
+        "is_armstrong": armstrong,
         "properties": properties,
-        "digit_sum": digit_sum(number),
-        "fun_fact": get_fun_fact(number)
+        "digit_sum": digit_sum,
+        "fun_fact": fun_fact
     }
 
-    return jsonify(response), 200
+    return jsonify(result)
 
-@app.errorhandler(Exception)
-def handle_exception(e):
-    return jsonify({
-        "error": True,
-        "message": "An unexpected error occurred."
-    }), 500
-
+# Run the app
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    import os  # Import os to get the environment variable for port
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
