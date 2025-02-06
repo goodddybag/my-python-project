@@ -1,11 +1,36 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS  # Importing the CORS module
-import requests  # To make HTTP requests to the Numbers API
+import asyncio
+import aiohttp
+from flask_caching import Cache
 
 app = Flask(__name__)
 
 # Enable CORS for all routes
 CORS(app)
+
+# Set up cache for storing fun facts
+app.config['CACHE_TYPE'] = 'simple'  # Using simple in-memory cache
+cache = Cache(app)
+
+# Asynchronous function to get fun facts from Numbers API
+async def get_fun_fact_async(number):
+    url = f"http://numbersapi.com/{number}?json"
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url, timeout=5) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data.get("text", "No fun fact found!")
+        except asyncio.TimeoutError:
+            return "Fun fact request timed out"
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+# Memoization of fun fact to avoid repeated API calls
+@cache.memoize(timeout=3600)  # Cache for 1 hour
+async def get_fun_fact(number):
+    return await get_fun_fact_async(number)
 
 def is_prime(number):
     if number <= 1:
@@ -26,17 +51,8 @@ def is_armstrong(number):
 def sum_of_digits(number):
     return sum(int(digit) for digit in str(number))
 
-def get_fun_fact(number):
-    # Call Numbers API to get a fun fact about the number
-    url = f"http://numbersapi.com/{number}?json"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.json().get("text", "No fun fact found!")
-    else:
-        return "No fun fact found!"
-
 @app.route('/api/classify-number', methods=['GET'])
-def classify_number():
+async def classify_number():
     if 'number' not in request.args:
         return jsonify({"error": "Missing 'number' parameter. Please provide a number."}), 400
 
@@ -65,8 +81,8 @@ def classify_number():
     elif odd_or_even == "Even":
         properties.append("even")
 
-    # Fetch fun fact from the Numbers API
-    fun_fact = get_fun_fact(number)
+    # Fetch fun fact asynchronously
+    fun_fact = await get_fun_fact(number)
 
     # Build response with explicit Armstrong information
     result = {
@@ -83,4 +99,5 @@ def classify_number():
 
 # Run the app
 if __name__ == '__main__':
+    import os  # Import os to get the environment variable for port
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
