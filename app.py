@@ -45,12 +45,17 @@ def is_prime(number):
     return True
 
 def is_perfect(number):
+    if not number.is_integer():  # Check if it's an integer
+        return False
+    number = int(number)  # Convert to integer for perfect number check
     divisors = [i for i in range(1, number) if number % i == 0]
     return sum(divisors) == number
 
 def is_armstrong(number):
-    digits = [int(digit) for digit in str(number)]
-    return sum([digit ** len(digits) for digit in digits]) == number
+    if not number.is_integer():  # Armstrong numbers only apply to integers
+        return False
+    digits = [int(digit) for digit in str(int(number))]
+    return sum([digit ** len(digits) for digit in digits]) == int(number)
 
 def sum_of_digits(number):
     return sum(int(digit) for digit in str(abs(int(number))))  # Handle absolute value for digits
