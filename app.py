@@ -45,7 +45,7 @@ def is_prime(number):
     return True
 
 def is_perfect(number):
-    if not number.is_integer():  # Check if it's an integer
+    if not number.is_integer():  # Only integers can be perfect numbers
         return False
     number = int(number)  # Convert to integer for perfect number check
     divisors = [i for i in range(1, number) if number % i == 0]
