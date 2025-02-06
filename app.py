@@ -45,15 +45,19 @@ def is_prime(number):
     return True
 
 def is_perfect(number):
+    if number < 0:
+        return False  # Negative numbers are not perfect
     divisors = [i for i in range(1, number) if number % i == 0]
     return sum(divisors) == number
 
 def is_armstrong(number):
+    if number < 0:
+        return False  # Negative numbers can't be Armstrong
     digits = [int(digit) for digit in str(number)]
     return sum([digit ** len(digits) for digit in digits]) == number
 
 def sum_of_digits(number):
-    return sum(int(digit) for digit in str(number))
+    return sum(int(digit) for digit in str(abs(number)))  # Use absolute value to sum digits of negative numbers
 
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
@@ -67,9 +71,9 @@ def classify_number():
         if number.is_integer():
             number = int(number)
 
-        # Negative numbers should be handled as valid numbers, not return 400
+        # Negative numbers should not cause 400 errors anymore
         if number < 0:
-            pass  # Negative numbers should not cause a 400 error
+            pass  # You can also add a specific message or note for negative numbers if necessary
 
     except ValueError:
         return jsonify({"error": "Invalid input. Please enter a valid number."}), 400
@@ -104,7 +108,7 @@ def classify_number():
         "fun_fact": fun_fact
     }
 
-    return jsonify(result), 200  # Always return a 200 status code for valid numbers
+    return jsonify(result)
 
 # Run the app
 if __name__ == '__main__':
