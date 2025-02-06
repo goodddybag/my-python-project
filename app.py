@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Set up cache for storing fun facts
-app.config['CACHE_TYPE'] = 'simple'  # Using simple in-memory cache
+app.config['CACHE_TYPE'] = 'simple'
 cache = Cache(app)
 
 # Asynchronous function to get fun facts from Numbers API
@@ -27,7 +27,7 @@ async def get_fun_fact_async(number):
         except Exception as e:
             return f"Error: {str(e)}"
 
-# Manual caching of fun facts (no async caching support here)
+# Manual caching of fun facts
 def get_fun_fact_from_cache(number):
     fun_fact = cache.get(f"fun_fact_{number}")
     if fun_fact is None:
@@ -45,38 +45,39 @@ def is_prime(number):
     return True
 
 def is_perfect(number):
-    if not number.is_integer():  # Only integers can be perfect numbers
-        return False
-    number = int(number)  # Convert to integer for perfect number check
     divisors = [i for i in range(1, number) if number % i == 0]
     return sum(divisors) == number
 
 def is_armstrong(number):
-    if not number.is_integer():  # Armstrong numbers only apply to integers
-        return False
-    digits = [int(digit) for digit in str(int(number))]
-    return sum([digit ** len(digits) for digit in digits]) == int(number)
+    digits = [int(digit) for digit in str(number)]
+    return sum([digit ** len(digits) for digit in digits]) == number
 
 def sum_of_digits(number):
-    return sum(int(digit) for digit in str(abs(int(number))))  # Handle absolute value for digits
+    return sum(int(digit) for digit in str(number))
 
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
     if 'number' not in request.args:
         return jsonify({"error": "Missing 'number' parameter. Please provide a number."}), 400
 
-    # Retrieve the number from the request
-    number_str = request.args.get('number')
     try:
-        # Try to handle floating-point and integer cases
-        number = float(number_str)  # Change this line to support both integers and floats
-    except ValueError:
-        return jsonify({"error": "Invalid input. Please enter a valid number.", "number": number_str}), 400
+        number = float(request.args.get('number'))
 
-    # Perform checks for numbers
-    prime = is_prime(number) if number.is_integer() else False
-    perfect = is_perfect(number) if number.is_integer() else False
-    armstrong = is_armstrong(number) if number.is_integer() else False
+        # Convert float to integer if no decimal part
+        if number.is_integer():
+            number = int(number)
+
+        if number < 0:
+            # Negative numbers should not cause a 400 error
+            pass  # You can also add a message or different handling here if necessary
+
+    except ValueError:
+        return jsonify({"error": "Invalid input. Please enter a valid number."}), 400
+
+    # Perform checks
+    prime = is_prime(number)
+    perfect = is_perfect(number)
+    armstrong = is_armstrong(number)
     odd_or_even = "Even" if number % 2 == 0 else "Odd"
     digit_sum = sum_of_digits(number)
 
@@ -92,7 +93,7 @@ def classify_number():
     # Fetch fun fact synchronously
     fun_fact = get_fun_fact_from_cache(number)
 
-    # Build response
+    # Build response with explicit Armstrong information
     result = {
         "number": number,
         "is_prime": prime,
@@ -103,7 +104,7 @@ def classify_number():
         "fun_fact": fun_fact
     }
 
-    return jsonify(result)  # Always return 200 OK
+    return jsonify(result)
 
 # Run the app
 if __name__ == '__main__':
