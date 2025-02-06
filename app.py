@@ -29,10 +29,12 @@ async def get_fun_fact_async(number):
 
 # Manual caching of fun facts
 def get_fun_fact_from_cache(number):
-    fun_fact = cache.get(f"fun_fact_{number}")
+    # Use the integer part of the number for fun fact
+    integer_part = int(number)
+    fun_fact = cache.get(f"fun_fact_{integer_part}")
     if fun_fact is None:
-        fun_fact = asyncio.run(get_fun_fact_async(number))  # Ensure we wait for the async function
-        cache.set(f"fun_fact_{number}", fun_fact, timeout=3600)  # Cache for 1 hour
+        fun_fact = asyncio.run(get_fun_fact_async(integer_part))  # Use integer part for fun fact
+        cache.set(f"fun_fact_{integer_part}", fun_fact, timeout=3600)  # Cache for 1 hour
     return fun_fact
 
 # Sync function to handle number checks
