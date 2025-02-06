@@ -68,6 +68,10 @@ def classify_number():
     results = []
 
     for num_str in number_param:
+        result = {
+            "number": num_str
+        }
+
         try:
             # Try to convert 'number' to a float to handle both integers and floating-point numbers
             number = float(num_str)
@@ -94,25 +98,21 @@ def classify_number():
             # Fetch fun fact synchronously (use the original number for fun fact)
             fun_fact = get_fun_fact_from_cache(number)
 
-            # Build result for valid number
-            result = {
-                "number": number,
+            # Add valid results
+            result.update({
                 "is_prime": prime,
                 "is_perfect": perfect,
                 "is_armstrong": armstrong,
                 "properties": properties,
                 "digit_sum": digit_sum,
                 "fun_fact": fun_fact
-            }
-
-            results.append(result)
-
-        except ValueError:
-            # Invalid number, return error message
-            results.append({
-                "number": num_str,
-                "error": "Invalid number format."
             })
+        
+        except ValueError:
+            # If invalid number, add error message to result
+            result["error"] = "Invalid number format."
+
+        results.append(result)
 
     # Return a 200 OK status with results for all numbers
     return jsonify(results), 200
