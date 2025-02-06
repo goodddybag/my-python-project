@@ -67,18 +67,17 @@ def classify_number():
     try:
         number = float(request.args.get('number'))
 
-        # Convert float to integer if no decimal part
-        if number.is_integer():
-            number = int(number)
+        # Convert float to integer for checks if no decimal part is present
+        integer_part = int(number) if number.is_integer() else int(number)
 
     except ValueError:
         return jsonify({"error": "Invalid input. Please enter a valid number."}), 400
 
     # Perform checks
-    prime = is_prime(number)
-    perfect = is_perfect(number)
-    armstrong = is_armstrong(number)
-    odd_or_even = "Even" if number % 2 == 0 else "Odd"
+    prime = is_prime(integer_part)
+    perfect = is_perfect(integer_part)
+    armstrong = is_armstrong(integer_part)
+    odd_or_even = "Even" if integer_part % 2 == 0 else "Odd"
     digit_sum = sum_of_digits(number)
 
     # Build properties list based on the conditions
@@ -90,7 +89,7 @@ def classify_number():
     elif odd_or_even == "Even":
         properties.append("even")
 
-    # Fetch fun fact synchronously
+    # Fetch fun fact synchronously (use the original number for fun fact)
     fun_fact = get_fun_fact_from_cache(number)
 
     # Build response with explicit Armstrong information
