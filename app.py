@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from flask_cors import CORS  # Importing the CORS module
+from flask_cors import CORS
 import asyncio
 import aiohttp
 from flask_caching import Cache
@@ -103,7 +103,7 @@ def classify_number():
         "fun_fact": fun_fact
     }
 
-    return jsonify(result)
+    return jsonify(result)  # Always return 200 OK
 
 # Run the app
 if __name__ == '__main__':
