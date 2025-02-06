@@ -64,59 +64,58 @@ def sum_of_digits(number):
 
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
-    # Get all 'number' parameters from the query string
-    number_params = request.args.getlist('number')
-    
-    # If no 'number' parameter or more than one, return an error
-    if len(number_params) != 1:
-        return jsonify({"error": "Please provide exactly one 'number' parameter."}), 400
+    number_param = request.args.getlist('number')
+    results = []
 
-    # Check if 'number' exists in the query string (fallback check)
-    if 'number' not in request.args:
-        return jsonify({"error": "Missing 'number' parameter. Please provide a number."}), 400
+    for num_str in number_param:
+        try:
+            # Try to convert 'number' to a float to handle both integers and floating-point numbers
+            number = float(num_str)
+            
+            # Convert float to integer for checks if no decimal part is present
+            integer_part = int(number) if number.is_integer() else int(number)
+            
+            # Perform checks
+            prime = is_prime(integer_part)
+            perfect = is_perfect(integer_part)
+            armstrong = is_armstrong(integer_part)
+            odd_or_even = "Even" if integer_part % 2 == 0 else "Odd"
+            digit_sum = sum_of_digits(number)
 
-    try:
-        # Try to convert 'number' to a float to handle both integers and floating-point numbers
-        number = float(number_params[0])  # Take the first number parameter
-        
-        # Convert float to integer for checks if no decimal part is present
-        integer_part = int(number) if number.is_integer() else int(number)
-        
-    except ValueError:
-        # If the number cannot be converted to a float, return an error
-        return jsonify({"error": "Invalid input. Please enter a valid number."}), 400
+            # Build properties list based on the conditions
+            properties = []
+            if armstrong:
+                properties.append("armstrong")
+            if odd_or_even == "Odd":
+                properties.append("odd")
+            elif odd_or_even == "Even":
+                properties.append("even")
 
-    # Perform checks
-    prime = is_prime(integer_part)
-    perfect = is_perfect(integer_part)
-    armstrong = is_armstrong(integer_part)
-    odd_or_even = "Even" if integer_part % 2 == 0 else "Odd"
-    digit_sum = sum_of_digits(number)
+            # Fetch fun fact synchronously (use the original number for fun fact)
+            fun_fact = get_fun_fact_from_cache(number)
 
-    # Build properties list based on the conditions
-    properties = []
-    if armstrong:
-        properties.append("armstrong")
-    if odd_or_even == "Odd":
-        properties.append("odd")
-    elif odd_or_even == "Even":
-        properties.append("even")
+            # Build result for valid number
+            result = {
+                "number": number,
+                "is_prime": prime,
+                "is_perfect": perfect,
+                "is_armstrong": armstrong,
+                "properties": properties,
+                "digit_sum": digit_sum,
+                "fun_fact": fun_fact
+            }
 
-    # Fetch fun fact synchronously (use the original number for fun fact)
-    fun_fact = get_fun_fact_from_cache(number)
+            results.append(result)
 
-    # Build response with explicit Armstrong information
-    result = {
-        "number": number,
-        "is_prime": prime,
-        "is_perfect": perfect,
-        "is_armstrong": armstrong,
-        "properties": properties,
-        "digit_sum": digit_sum,
-        "fun_fact": fun_fact
-    }
+        except ValueError:
+            # Invalid number, return error message
+            results.append({
+                "number": num_str,
+                "error": "Invalid number format."
+            })
 
-    return jsonify(result)
+    # Return a 200 OK status with results for all numbers
+    return jsonify(results), 200
 
 # Run the app
 if __name__ == '__main__':
