@@ -49,11 +49,11 @@ def is_perfect(number):
     return sum(divisors) == number
 
 def is_armstrong(number):
-    digits = [int(digit) for digit in str(number)]
-    return sum([digit ** len(digits) for digit in digits]) == number
+    digits = [int(digit) for digit in str(abs(number))]  # Use absolute value for negative numbers
+    return sum([digit ** len(digits) for digit in digits]) == abs(number)
 
 def sum_of_digits(number):
-    return sum(int(digit) for digit in str(number))
+    return sum(int(digit) for digit in str(abs(number)))  # Use absolute value for negative numbers
 
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
@@ -67,19 +67,15 @@ def classify_number():
         if number.is_integer():
             number = int(number)
 
-        if number < 0:
-            # Negative numbers should not cause a 400 error
-            pass  # You can also add a message or different handling here if necessary
-
     except ValueError:
         return jsonify({"error": "Invalid input. Please enter a valid number."}), 400
 
     # Perform checks
-    prime = is_prime(number)
-    perfect = is_perfect(number)
-    armstrong = is_armstrong(number)
+    prime = is_prime(abs(number))  # Absolute value to avoid errors for negative numbers
+    perfect = is_perfect(abs(number))  # Absolute value to avoid errors for negative numbers
+    armstrong = is_armstrong(number)  # Use original number for armstrong check (negative or positive)
     odd_or_even = "Even" if number % 2 == 0 else "Odd"
-    digit_sum = sum_of_digits(number)
+    digit_sum = sum_of_digits(number)  # Absolute value to avoid errors in sum calculation
 
     # Build properties list based on the conditions
     properties = []
@@ -91,7 +87,7 @@ def classify_number():
         properties.append("even")
 
     # Fetch fun fact synchronously
-    fun_fact = get_fun_fact_from_cache(number)
+    fun_fact = get_fun_fact_from_cache(abs(number))  # Fun fact is based on absolute value
 
     # Build response with explicit Armstrong information
     result = {
