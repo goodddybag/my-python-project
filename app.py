@@ -64,16 +64,25 @@ def sum_of_digits(number):
 
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
+    # Ensure there is exactly one 'number' parameter in the request
+    number_param = request.args.getlist('number')
+    
+    if len(number_param) != 1:
+        return jsonify({"error": "Please provide exactly one 'number' parameter."}), 400
+
+    # Check if 'number' exists in the query string
     if 'number' not in request.args:
         return jsonify({"error": "Missing 'number' parameter. Please provide a number."}), 400
 
     try:
+        # Try to convert 'number' to a float to handle both integers and floating-point numbers
         number = float(request.args.get('number'))
-
+        
         # Convert float to integer for checks if no decimal part is present
         integer_part = int(number) if number.is_integer() else int(number)
-
+        
     except ValueError:
+        # If the number cannot be converted to a float, return an error
         return jsonify({"error": "Invalid input. Please enter a valid number."}), 400
 
     # Perform checks
