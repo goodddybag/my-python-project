@@ -57,7 +57,8 @@ def is_armstrong(number):
     return sum([digit ** len(digits) for digit in digits]) == number
 
 def sum_of_digits(number):
-    return sum(int(digit) for digit in str(abs(number)))  # Use absolute value to sum digits of negative numbers
+    # Convert to a string, remove the decimal point if present, and sum the digits
+    return sum(int(digit) for digit in str(abs(number)).replace('.', ''))  # Remove the decimal point
 
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
