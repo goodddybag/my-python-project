@@ -53,26 +53,25 @@ def is_armstrong(number):
     return sum([digit ** len(digits) for digit in digits]) == number
 
 def sum_of_digits(number):
-    return sum(int(digit) for digit in str(number))
+    return sum(int(digit) for digit in str(abs(int(number))))  # Handle absolute value for digits
 
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
     if 'number' not in request.args:
         return jsonify({"error": "Missing 'number' parameter. Please provide a number."}), 400
 
+    # Retrieve the number from the request
+    number_str = request.args.get('number')
     try:
-        number = int(request.args.get('number'))
-
-        if number < 0:
-            return jsonify({"error": "Please enter a positive integer."}), 400
-
+        # Try to handle floating-point and integer cases
+        number = float(number_str)  # Change this line to support both integers and floats
     except ValueError:
-        return jsonify({"error": "Invalid input. Please enter a valid integer."}), 400
+        return jsonify({"error": "Invalid input. Please enter a valid number.", "number": number_str}), 400
 
-    # Perform checks
-    prime = is_prime(number)
-    perfect = is_perfect(number)
-    armstrong = is_armstrong(number)
+    # Perform checks for numbers
+    prime = is_prime(number) if number.is_integer() else False
+    perfect = is_perfect(number) if number.is_integer() else False
+    armstrong = is_armstrong(number) if number.is_integer() else False
     odd_or_even = "Even" if number % 2 == 0 else "Odd"
     digit_sum = sum_of_digits(number)
 
@@ -88,13 +87,13 @@ def classify_number():
     # Fetch fun fact synchronously
     fun_fact = get_fun_fact_from_cache(number)
 
-    # Build response with explicit Armstrong information
+    # Build response
     result = {
         "number": number,
         "is_prime": prime,
         "is_perfect": perfect,
         "is_armstrong": armstrong,
-        "properties": properties,  # Now the list will not include empty strings
+        "properties": properties,
         "digit_sum": digit_sum,
         "fun_fact": fun_fact
     }
